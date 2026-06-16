@@ -37,6 +37,7 @@ public class ChatRoom {
             joinColumns = @JoinColumn(name = "room_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
+    @Builder.Default
     private List<User> members = new ArrayList<>();
 
     @PrePersist
