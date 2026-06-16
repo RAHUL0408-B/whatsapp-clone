@@ -80,6 +80,13 @@ public class ChatService {
         return room;
     }
 
+    // Get all rooms a user is a member of
+    public List<ChatRoom> getUserRooms(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return chatRoomRepository.findByMembersContaining(user);
+    }
+
     // Convert Message to MessageResponse
     private MessageResponse mapToResponse(Message message) {
         return MessageResponse.builder()

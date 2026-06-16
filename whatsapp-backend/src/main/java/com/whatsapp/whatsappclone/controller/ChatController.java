@@ -63,4 +63,11 @@ public class ChatController {
             @PathVariable Long roomId) {
         return ResponseEntity.ok(chatService.getRoomMessages(roomId));
     }
+
+    // ✅ REST — Get rooms for user
+    @GetMapping("/rooms")
+    public ResponseEntity<List<ChatRoom>> getUserRooms(
+            @RequestParam String email) {
+        return ResponseEntity.ok(chatService.getUserRooms(email));
+    }
 }
