@@ -42,6 +42,8 @@ export const joinRoom = (roomId, email) =>
     api.post(`/api/chat/room/${roomId}/join?email=${email}`);
 export const getMessages = (roomId) =>
     api.get(`/api/chat/room/${roomId}/messages`);
+export const getRooms = (email) =>
+    api.get(`/api/chat/rooms?email=${email}`);
 
 // Presence APIs
 export const goOnline = (email) =>

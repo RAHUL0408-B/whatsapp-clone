@@ -3,14 +3,16 @@ import SockJS from 'sockjs-client';
 
 let client = null;
 
-export const connectWebSocket = (onMessageReceived) => {
+export const connectWebSocket = (onConnectCallback, onDisconnectCallback) => {
     client = new Client({
         webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
         onConnect: () => {
             console.log('✅ WebSocket connected!');
+            if (onConnectCallback) onConnectCallback();
         },
         onDisconnect: () => {
             console.log('❌ WebSocket disconnected');
+            if (onDisconnectCallback) onDisconnectCallback();
         },
         reconnectDelay: 5000,
     });

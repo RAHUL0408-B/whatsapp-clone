@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createRoom, getMessages, goOffline } from '../services/api';
+import { createRoom, getMessages, goOffline, getRooms } from '../services/api';
 import { connectWebSocket, subscribeToRoom, sendMessage } from '../services/websocket';
 
 export default function Chat() {
@@ -10,29 +10,48 @@ export default function Chat() {
     const [newMessage, setNewMessage] = useState('');
     const [newRoomName, setNewRoomName] = useState('');
     const [wsClient, setWsClient] = useState(null);
+    const [connected, setConnected] = useState(false);
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
 
     const email = localStorage.getItem('email');
     const username = localStorage.getItem('username');
 
-    // Connect WebSocket on mount
+    // Connect WebSocket on mount and track connection status
     useEffect(() => {
-        const client = connectWebSocket();
+        const client = connectWebSocket(
+            () => setConnected(true),
+            () => setConnected(false)
+        );
         setWsClient(client);
         return () => client?.deactivate();
     }, []);
 
-    // Subscribe to room when activeRoom changes
+    // Fetch user's joined rooms on mount
     useEffect(() => {
-        if (wsClient && activeRoom) {
+        const fetchRooms = async () => {
+            try {
+                const res = await getRooms(email);
+                setRooms(res.data);
+            } catch (err) {
+                console.error('Failed to load user rooms');
+            }
+        };
+        if (email) {
+            fetchRooms();
+        }
+    }, [email]);
+
+    // Subscribe to room when activeRoom or connection status changes
+    useEffect(() => {
+        if (wsClient && connected && activeRoom) {
             loadMessages(activeRoom.id);
             const sub = subscribeToRoom(wsClient, activeRoom.id, (msg) => {
                 setMessages(prev => [...prev, msg]);
             });
             return () => sub?.unsubscribe();
         }
-    }, [wsClient, activeRoom]);
+    }, [wsClient, connected, activeRoom]);
 
     // Auto scroll to bottom
     useEffect(() => {
@@ -52,7 +71,10 @@ export default function Chat() {
         if (!newRoomName.trim()) return;
         try {
             const res = await createRoom(newRoomName, email);
-            setRooms(prev => [...prev, res.data]);
+            setRooms(prev => {
+                if (prev.some(r => r.id === res.data.id)) return prev;
+                return [...prev, res.data];
+            });
             setNewRoomName('');
             setActiveRoom(res.data);
         } catch (err) {
