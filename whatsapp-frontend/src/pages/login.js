@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login, goOnline } from '../services/api';
+import { MessageSquare } from 'lucide-react';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -33,39 +34,57 @@ export default function Login() {
 
     return (
         <div style={styles.container}>
-            <div style={styles.box}>
-                <div style={styles.logo}>💬 WhatsApp Clone</div>
-                <h2 style={styles.title}>Welcome back</h2>
-                <p style={styles.subtitle}>Sign in to continue</p>
+            <div style={styles.headerBand}>
+                <div style={styles.headerContent}>
+                    <MessageSquare size={28} color="white" fill="white" />
+                    <span style={styles.headerTitle}>WhatsApp Web</span>
+                </div>
+            </div>
 
-                {error && <div style={styles.error}>{error}</div>}
+            <div style={styles.cardContainer}>
+                <div style={styles.card}>
+                    <div style={styles.cardHeader}>
+                        <h2 style={styles.title}>Use WhatsApp on your computer</h2>
+                        <ol style={styles.instructions}>
+                            <li>1. Open WhatsApp on your phone</li>
+                            <li>2. Tap <strong>Menu</strong> or <strong>Settings</strong> and select <strong>Linked Devices</strong></li>
+                            <li>3. Tap on <strong>Link a device</strong></li>
+                            <li>4. (For this clone, just login below!)</li>
+                        </ol>
+                    </div>
 
-                <form onSubmit={handleLogin}>
-                    <input
-                        style={styles.input}
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        required
-                    />
-                    <input
-                        style={styles.input}
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        required
-                    />
-                    <button style={styles.button} type="submit" disabled={loading}>
-                        {loading ? 'Signing in...' : 'Sign In'}
-                    </button>
-                </form>
+                    <div style={styles.formSection}>
+                        {error && <div style={styles.error}>{error}</div>}
+                        
+                        <form onSubmit={handleLogin} style={styles.form}>
+                            <input
+                                style={styles.input}
+                                type="email"
+                                placeholder="Email address"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                required
+                            />
+                            <input
+                                style={styles.input}
+                                type="password"
+                                placeholder="Password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                required
+                            />
+                            <button style={styles.button} type="submit" disabled={loading}>
+                                {loading ? 'Logging in...' : 'Log In'}
+                            </button>
+                        </form>
 
-                <p style={styles.link}>
-                    Don't have an account?{' '}
-                    <Link to="/register" style={styles.linkText}>Register</Link>
-                </p>
+                        <div style={styles.footer}>
+                            <p style={styles.linkText}>
+                                Need an account? <Link to="/register" style={styles.link}>Get started</Link>
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -73,77 +92,128 @@ export default function Login() {
 
 const styles = {
     container: {
+        minHeight: '100vh',
+        backgroundColor: '#111b21',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+    },
+    headerBand: {
+        height: '222px',
+        width: '100%',
+        backgroundColor: '#00a884',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        zIndex: 0,
+    },
+    headerContent: {
+        maxWidth: '1000px',
+        margin: '0 auto',
+        padding: '28px 0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+    },
+    headerTitle: {
+        color: 'white',
+        fontSize: '14px',
+        fontWeight: '500',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px'
+    },
+    cardContainer: {
+        flex: 1,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh',
-        background: '#111b21',
+        zIndex: 1,
+        marginTop: '60px',
     },
-    box: {
-        background: '#202c33',
-        padding: '40px',
-        borderRadius: '12px',
-        width: '380px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+    card: {
+        backgroundColor: '#202c33',
+        borderRadius: '3px',
+        width: '100%',
+        maxWidth: '1000px',
+        minHeight: '400px',
+        display: 'flex',
+        boxShadow: '0 17px 50px 0 rgba(11,20,26,.19), 0 12px 15px 0 rgba(11,20,26,.24)',
+        padding: '60px',
+        gap: '60px',
     },
-    logo: {
-        fontSize: '28px',
-        textAlign: 'center',
-        marginBottom: '20px',
+    cardHeader: {
+        flex: 1,
     },
     title: {
         color: '#e9edef',
-        textAlign: 'center',
-        fontSize: '22px',
-        marginBottom: '6px',
+        fontSize: '28px',
+        fontWeight: '300',
+        marginBottom: '40px',
     },
-    subtitle: {
+    instructions: {
         color: '#8696a0',
-        textAlign: 'center',
-        fontSize: '13px',
-        marginBottom: '24px',
+        fontSize: '18px',
+        lineHeight: '28px',
+        listStyle: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
     },
-    error: {
-        background: '#ff000022',
-        border: '1px solid #ff4444',
-        color: '#ff4444',
-        padding: '10px',
-        borderRadius: '8px',
-        marginBottom: '16px',
-        fontSize: '13px',
-        textAlign: 'center',
+    formSection: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        maxWidth: '350px',
+    },
+    form: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
     },
     input: {
         width: '100%',
-        padding: '12px 14px',
-        marginBottom: '14px',
-        background: '#2a3942',
-        border: '1px solid #374045',
-        borderRadius: '8px',
+        padding: '16px',
+        backgroundColor: '#111b21',
+        border: 'none',
+        borderRadius: '6px',
         color: '#e9edef',
-        fontSize: '14px',
+        fontSize: '16px',
         outline: 'none',
     },
     button: {
         width: '100%',
-        padding: '13px',
-        background: '#00a884',
-        color: 'white',
+        padding: '16px',
+        backgroundColor: '#00a884',
+        color: '#111b21',
         border: 'none',
-        borderRadius: '8px',
-        fontSize: '15px',
-        fontWeight: '600',
+        borderRadius: '24px',
+        fontSize: '16px',
+        fontWeight: '500',
         cursor: 'pointer',
-        marginTop: '4px',
+        transition: 'background 0.2s',
+        marginTop: '10px',
     },
-    link: {
-        color: '#8696a0',
+    error: {
+        color: '#f15c6d',
+        backgroundColor: 'rgba(241, 92, 109, 0.1)',
+        padding: '12px',
+        borderRadius: '6px',
+        marginBottom: '20px',
+        fontSize: '14px',
         textAlign: 'center',
-        marginTop: '20px',
-        fontSize: '13px',
+    },
+    footer: {
+        marginTop: '40px',
+        textAlign: 'center',
     },
     linkText: {
+        color: '#8696a0',
+        fontSize: '15px',
+    },
+    link: {
         color: '#00a884',
         textDecoration: 'none',
-    },
+        fontWeight: '500',
+    }
 };

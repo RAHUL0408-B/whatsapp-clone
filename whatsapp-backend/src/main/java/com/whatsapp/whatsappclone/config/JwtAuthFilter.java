@@ -48,23 +48,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         // Extract token (remove "Bearer " prefix)
         jwt = authHeader.substring(7);
-        userEmail = jwtUtil.extractEmail(jwt);
+        try {
+            userEmail = jwtUtil.extractEmail(jwt);
 
-        // If email found and user not yet authenticated
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            // If email found and user not yet authenticated
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-            // If token valid → authenticate user
-            if (jwtUtil.isTokenValid(jwt, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities()
-                        );
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                // If token valid → authenticate user
+                if (jwtUtil.isTokenValid(jwt, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities()
+                            );
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
+        } catch (Exception e) {
+            // Ignore invalid token, just don't authenticate
+            System.out.println("Invalid JWT token: " + e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

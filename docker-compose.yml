@@ -5,10 +5,9 @@ services:
   postgres:
     image: postgres:15
     container_name: whatsapp_postgres
+    env_file:
+      - ./whatsapp-backend/.env
     environment:
-      POSTGRES_DB: whatsapp_db
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
       TZ: Asia/Kolkata
     ports:
       - "5432:5432"
@@ -59,10 +58,10 @@ services:
       - kafka
     ports:
       - "8081:8080"
+    env_file:
+      - ./whatsapp-backend/.env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/whatsapp_db?serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin123
+      DB_HOST: postgres
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Kolkata
