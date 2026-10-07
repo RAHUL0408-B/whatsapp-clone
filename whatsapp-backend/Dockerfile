@@ -1,23 +1,21 @@
-# Use Java 21 base image
-FROM eclipse-temurin:21-jdk-alpine
+# Stage 1: Build the Spring Boot JAR
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /build
 
-# Set working directory
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B || true
+
+COPY src/ src/
+RUN ./mvnw clean package -DskipTests -B
+
+# Stage 2: Production JRE Runtime
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Copy maven files first (for caching)
-COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
+COPY --from=builder /build/target/*.jar app.jar
 
-# Download dependencies
-RUN ./mvnw dependency:go-offline -B
-
-# Copy source code
-COPY src src
-
-# Build the app
-RUN ./mvnw package -DskipTests
-
-# Run the jar
+ENV PORT=8080
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "target/whatsapp-clone-0.0.1-SNAPSHOT.jar"]
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8081';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -44,6 +44,14 @@ export const getMessages = (roomId) =>
     api.get(`/api/chat/room/${roomId}/messages`);
 export const getRooms = (email) =>
     api.get(`/api/chat/rooms?email=${email}`);
+export const getRoomsDetailed = (email) =>
+    api.get(`/api/chat/rooms/detailed?email=${email}`);
+export const getOrCreateDirectChat = (userEmail, targetEmail) =>
+    api.post('/api/chat/room/direct', { userEmail, targetEmail });
+
+// User & Contacts APIs
+export const getContacts = (email, search = '') =>
+    api.get(`/api/users/contacts?email=${email}&search=${encodeURIComponent(search)}`);
 
 // Presence APIs
 export const goOnline = (email) =>

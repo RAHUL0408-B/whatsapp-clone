@@ -41,6 +41,14 @@ public class ChatController {
         kafkaProducerService.sendMessage(kafkaMessage);
     }
 
+    // ✅ REST — Send message
+    @PostMapping("/message/send")
+    public ResponseEntity<MessageResponse> sendMessageRest(@RequestBody MessageRequest request) {
+        MessageResponse response = chatService.saveMessage(request);
+        messagingTemplate.convertAndSend("/topic/room/" + request.getRoomId(), response);
+        return ResponseEntity.ok(response);
+    }
+
     // ✅ REST — Create a chat room
     @PostMapping("/room/create")
     public ResponseEntity<ChatRoom> createRoom(
@@ -69,5 +77,19 @@ public class ChatController {
     public ResponseEntity<List<ChatRoom>> getUserRooms(
             @RequestParam String email) {
         return ResponseEntity.ok(chatService.getUserRooms(email));
+    }
+
+    // ✅ REST — Get rich detailed rooms for WhatsApp conversation list
+    @GetMapping("/rooms/detailed")
+    public ResponseEntity<List<com.whatsapp.whatsappclone.dto.ChatRoomResponse>> getUserRoomsDetailed(
+            @RequestParam String email) {
+        return ResponseEntity.ok(chatService.getUserRoomsWithDetails(email));
+    }
+
+    // ✅ REST — Get or create 1-on-1 direct chat room
+    @PostMapping("/room/direct")
+    public ResponseEntity<ChatRoom> getOrCreateDirectRoom(
+            @RequestBody com.whatsapp.whatsappclone.dto.DirectChatRequest request) {
+        return ResponseEntity.ok(chatService.getOrCreateDirectRoom(request.getUserEmail(), request.getTargetEmail()));
     }
 }

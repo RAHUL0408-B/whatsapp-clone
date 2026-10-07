@@ -1,0 +1,45 @@
+services:
+  # 1. Spring Boot Backend Web Service
+  - type: web
+    name: whatsapp-backend
+    runtime: docker
+    dockerContext: ./whatsapp-backend
+    dockerfilePath: ./whatsapp-backend/Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/presence/status?email=system@health
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DB_HOST
+        fromDatabase:
+          name: whatsapp-postgres-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: whatsapp-postgres-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: whatsapp-postgres-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: whatsapp-postgres-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: whatsapp-postgres-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 86400000
+
+databases:
+  # 2. Managed PostgreSQL Database
+  - name: whatsapp-postgres-db
+    databaseName: Whatsapp-clone
+    user: admin
+    plan: free
+    region: oregon

@@ -14,6 +14,7 @@ public class MessageResponse {
     private Long id;
     private String content;
     private String senderUsername;
+    private String senderEmail;
     private Long roomId;
     private LocalDateTime sentAt;
     private String status;

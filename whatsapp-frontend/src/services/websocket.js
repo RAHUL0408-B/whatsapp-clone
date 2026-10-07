@@ -3,9 +3,11 @@ import SockJS from 'sockjs-client';
 
 let client = null;
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
 export const connectWebSocket = (onConnectCallback, onDisconnectCallback) => {
     client = new Client({
-        webSocketFactory: () => new SockJS('http://localhost:8081/ws'),
+        webSocketFactory: () => new SockJS(`${API_URL}/ws`),
         onConnect: () => {
             console.log('✅ WebSocket connected!');
             if (onConnectCallback) onConnectCallback();

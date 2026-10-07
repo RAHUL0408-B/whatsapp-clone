@@ -25,8 +25,16 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(nullable = false)
     private String password;
+
+    @Column(name = "about")
+    @Builder.Default
+    private String about = "Hey there! I am using WhatsApp.";
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -38,5 +46,8 @@ public class User {
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
         this.isOnline = false;
+        if (this.about == null) {
+            this.about = "Hey there! I am using WhatsApp.";
+        }
     }
 }
