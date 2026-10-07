@@ -4,6 +4,8 @@ import com.whatsapp.whatsappclone.dto.PresenceResponse;
 import com.whatsapp.whatsappclone.entity.User;
 import com.whatsapp.whatsappclone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -13,62 +15,82 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PresenceService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserRepository userRepository;
 
-    // Key prefixes in Redis
+    @Value("${app.redis.enabled:true}")
+    private boolean redisEnabled;
+
     private static final String ONLINE_KEY = "online:";
     private static final String LAST_SEEN_KEY = "lastSeen:";
 
-    // User comes online
     public void setUserOnline(String email) {
-        // Set online flag — expires in 5 minutes
-        redisTemplate.opsForValue().set(
-                ONLINE_KEY + email,
-                "true",
-                5,
-                TimeUnit.MINUTES
-        );
-
-        // Update user in PostgreSQL too
+        // Always update PostgreSQL
         userRepository.findByEmail(email).ifPresent(user -> {
             user.setOnline(true);
             userRepository.save(user);
         });
+
+        // Update Redis if available
+        if (redisEnabled) {
+            try {
+                redisTemplate.opsForValue().set(ONLINE_KEY + email, "true", 5, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.warn("Redis unavailable, falling back to DB-only presence: {}", e.getMessage());
+            }
+        }
     }
 
-    // User goes offline
     public void setUserOffline(String email) {
-        // Remove online flag
-        redisTemplate.delete(ONLINE_KEY + email);
-
-        // Save last seen time
-        String lastSeen = LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        redisTemplate.opsForValue().set(LAST_SEEN_KEY + email, lastSeen);
-
-        // Update user in PostgreSQL
+        // Always update PostgreSQL
         userRepository.findByEmail(email).ifPresent(user -> {
             user.setOnline(false);
             userRepository.save(user);
         });
+
+        // Update Redis if available
+        if (redisEnabled) {
+            try {
+                redisTemplate.delete(ONLINE_KEY + email);
+                String lastSeen = LocalDateTime.now()
+                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                redisTemplate.opsForValue().set(LAST_SEEN_KEY + email, lastSeen);
+            } catch (Exception e) {
+                log.warn("Redis unavailable for offline status: {}", e.getMessage());
+            }
+        }
     }
 
-    // Check if user is online
     public boolean isUserOnline(String email) {
-        return redisTemplate.hasKey(ONLINE_KEY + email);
+        // Try Redis first
+        if (redisEnabled) {
+            try {
+                return Boolean.TRUE.equals(redisTemplate.hasKey(ONLINE_KEY + email));
+            } catch (Exception e) {
+                log.warn("Redis unavailable, falling back to DB for online check");
+            }
+        }
+        // Fallback: use PostgreSQL is_online column
+        return userRepository.findByEmail(email)
+                .map(User::isOnline)
+                .orElse(false);
     }
 
-    // Get last seen time
     public String getLastSeen(String email) {
-        Object lastSeen = redisTemplate.opsForValue()
-                .get(LAST_SEEN_KEY + email);
-        return lastSeen != null ? lastSeen.toString() : "Never";
+        if (redisEnabled) {
+            try {
+                Object lastSeen = redisTemplate.opsForValue().get(LAST_SEEN_KEY + email);
+                if (lastSeen != null) return lastSeen.toString();
+            } catch (Exception e) {
+                log.warn("Redis unavailable for lastSeen lookup");
+            }
+        }
+        return "Recently";
     }
 
-    // Get full presence info
     public PresenceResponse getUserPresence(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -84,15 +106,15 @@ public class PresenceService {
                 .build();
     }
 
-    // Refresh online status (called every few minutes by client)
     public void refreshOnlineStatus(String email) {
-        if (isUserOnline(email)) {
-            // Reset the 5 minute timer
-            redisTemplate.expire(
-                    ONLINE_KEY + email,
-                    5,
-                    TimeUnit.MINUTES
-            );
+        if (redisEnabled) {
+            try {
+                if (Boolean.TRUE.equals(redisTemplate.hasKey(ONLINE_KEY + email))) {
+                    redisTemplate.expire(ONLINE_KEY + email, 5, TimeUnit.MINUTES);
+                }
+            } catch (Exception e) {
+                log.warn("Redis unavailable for refresh");
+            }
         }
     }
 }

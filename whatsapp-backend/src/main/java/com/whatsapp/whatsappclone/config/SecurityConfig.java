@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/users/**").permitAll()
                         .requestMatchers("/api/chat/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -58,10 +59,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow React frontend (local and Vercel cloud domains)
+        // Allow React frontend (local, Render, and any HTTPS domain)
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://localhost:8080",
+                "https://*.onrender.com",
                 "https://*.vercel.app",
                 "https://*"
         ));

@@ -6,7 +6,8 @@ import com.whatsapp.whatsappclone.dto.MessageResponse;
 import com.whatsapp.whatsappclone.entity.ChatRoom;
 import com.whatsapp.whatsappclone.service.ChatService;
 import com.whatsapp.whatsappclone.service.KafkaProducerService;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -17,31 +18,44 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
+@Slf4j
 @RequestMapping("/api/chat")
 public class ChatController {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final KafkaProducerService kafkaProducerService;
 
-    // ✅ WebSocket endpoint — sends through Kafka
-    @MessageMapping("/sendMessage")
-    public void sendMessage(@Payload MessageRequest request) {
+    // Optional — not available when Kafka is disabled (e.g. Render free tier)
+    @Autowired(required = false)
+    private KafkaProducerService kafkaProducerService;
 
-        // Build Kafka message
-        KafkaMessageDto kafkaMessage = KafkaMessageDto.builder()
-                .content(request.getContent())
-                .senderEmail(request.getSenderEmail())
-                .roomId(request.getRoomId())
-                .sentAt(LocalDateTime.now())
-                .build();
-
-        // Send to Kafka queue
-        kafkaProducerService.sendMessage(kafkaMessage);
+    @Autowired
+    public ChatController(ChatService chatService, SimpMessagingTemplate messagingTemplate) {
+        this.chatService = chatService;
+        this.messagingTemplate = messagingTemplate;
     }
 
-    // ✅ REST — Send message
+    // WebSocket endpoint — tries Kafka first, falls back to direct save+broadcast
+    @MessageMapping("/sendMessage")
+    public void sendMessage(@Payload MessageRequest request) {
+        if (kafkaProducerService != null) {
+            // Kafka path (local / production with Kafka)
+            KafkaMessageDto kafkaMessage = KafkaMessageDto.builder()
+                    .content(request.getContent())
+                    .senderEmail(request.getSenderEmail())
+                    .roomId(request.getRoomId())
+                    .sentAt(LocalDateTime.now())
+                    .build();
+            kafkaProducerService.sendMessage(kafkaMessage);
+        } else {
+            // Direct path (Render free tier — no Kafka)
+            log.info("Kafka disabled — saving message directly for room {}", request.getRoomId());
+            MessageResponse response = chatService.saveMessage(request);
+            messagingTemplate.convertAndSend("/topic/room/" + request.getRoomId(), response);
+        }
+    }
+
+    // REST — Send message
     @PostMapping("/message/send")
     public ResponseEntity<MessageResponse> sendMessageRest(@RequestBody MessageRequest request) {
         MessageResponse response = chatService.saveMessage(request);
@@ -49,7 +63,7 @@ public class ChatController {
         return ResponseEntity.ok(response);
     }
 
-    // ✅ REST — Create a chat room
+    // REST — Create a chat room
     @PostMapping("/room/create")
     public ResponseEntity<ChatRoom> createRoom(
             @RequestParam String name,
@@ -57,7 +71,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.createRoom(name, email));
     }
 
-    // ✅ REST — Join a room
+    // REST — Join a room
     @PostMapping("/room/{roomId}/join")
     public ResponseEntity<ChatRoom> joinRoom(
             @PathVariable Long roomId,
@@ -65,28 +79,28 @@ public class ChatController {
         return ResponseEntity.ok(chatService.joinRoom(roomId, email));
     }
 
-    // ✅ REST — Get message history
+    // REST — Get message history
     @GetMapping("/room/{roomId}/messages")
     public ResponseEntity<List<MessageResponse>> getMessages(
             @PathVariable Long roomId) {
         return ResponseEntity.ok(chatService.getRoomMessages(roomId));
     }
 
-    // ✅ REST — Get rooms for user
+    // REST — Get rooms for user
     @GetMapping("/rooms")
     public ResponseEntity<List<ChatRoom>> getUserRooms(
             @RequestParam String email) {
         return ResponseEntity.ok(chatService.getUserRooms(email));
     }
 
-    // ✅ REST — Get rich detailed rooms for WhatsApp conversation list
+    // REST — Get rich detailed rooms for WhatsApp conversation list
     @GetMapping("/rooms/detailed")
     public ResponseEntity<List<com.whatsapp.whatsappclone.dto.ChatRoomResponse>> getUserRoomsDetailed(
             @RequestParam String email) {
         return ResponseEntity.ok(chatService.getUserRoomsWithDetails(email));
     }
 
-    // ✅ REST — Get or create 1-on-1 direct chat room
+    // REST — Get or create 1-on-1 direct chat room
     @PostMapping("/room/direct")
     public ResponseEntity<ChatRoom> getOrCreateDirectRoom(
             @RequestBody com.whatsapp.whatsappclone.dto.DirectChatRequest request) {

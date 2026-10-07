@@ -5,6 +5,7 @@ import com.whatsapp.whatsappclone.dto.MessageRequest;
 import com.whatsapp.whatsappclone.dto.MessageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -12,21 +13,16 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "app.kafka.enabled", havingValue = "true", matchIfMissing = true)
 public class KafkaConsumerService {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // Listen to "chat-messages" topic
-    @KafkaListener(
-            topics = "chat-messages",
-            groupId = "whatsapp-group"
-    )
+    @KafkaListener(topics = "chat-messages", groupId = "whatsapp-group")
     public void consumeMessage(KafkaMessageDto kafkaMessage) {
         log.info("📨 Message received from Kafka: {}", kafkaMessage.getContent());
-
         try {
-            // Save message to PostgreSQL
             MessageRequest request = new MessageRequest();
             request.setContent(kafkaMessage.getContent());
             request.setSenderEmail(kafkaMessage.getSenderEmail());
@@ -34,15 +30,11 @@ public class KafkaConsumerService {
 
             MessageResponse response = chatService.saveMessage(request);
 
-            // Broadcast to WebSocket subscribers
             messagingTemplate.convertAndSend(
                     "/topic/room/" + kafkaMessage.getRoomId(),
                     response
             );
-
-            log.info("✅ Message saved and broadcasted to room: {}",
-                    kafkaMessage.getRoomId());
-
+            log.info("✅ Message saved and broadcasted to room: {}", kafkaMessage.getRoomId());
         } catch (Exception e) {
             log.error("❌ Error processing message: {}", e.getMessage());
         }

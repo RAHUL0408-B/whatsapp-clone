@@ -7,6 +7,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -18,24 +19,26 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@ConditionalOnProperty(name = "app.kafka.enabled", havingValue = "true", matchIfMissing = true)
 public class KafkaConfig {
 
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    // Create the topic automatically
     @Bean
     public NewTopic chatMessagesTopic() {
         return new NewTopic("chat-messages", 1, (short) 1);
     }
 
-    // Producer config — sends messages TO Kafka
     @Bean
     public ProducerFactory<String, KafkaMessageDto> producerFactory() {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        // Don't block startup if Kafka is unavailable
+        config.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 3000);
+        config.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 3000);
         return new DefaultKafkaProducerFactory<>(config);
     }
 
@@ -44,7 +47,6 @@ public class KafkaConfig {
         return new KafkaTemplate<>(producerFactory());
     }
 
-    // Consumer config — reads messages FROM Kafka
     @Bean
     public ConsumerFactory<String, KafkaMessageDto> consumerFactory() {
         Map<String, Object> config = new HashMap<>();
