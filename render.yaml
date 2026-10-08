@@ -43,15 +43,19 @@ services:
       - key: JWT_EXPIRATION
         value: 86400000
 
+      # Activate Render Spring profile (excludes Redis & Kafka auto-config)
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+
       # Disable Redis & Kafka on Render free tier
       - key: REDIS_ENABLED
         value: false
       - key: KAFKA_ENABLED
         value: false
 
-      # Timezone
+      # Timezone & memory tuning for Render free tier (512MB RAM)
       - key: JAVA_TOOL_OPTIONS
-        value: -Duser.timezone=UTC
+        value: -Duser.timezone=UTC -Xmx400m -Xms200m
 
   # ─────────────────────────────────────────────────
   # 2. React Frontend (Static Site)
