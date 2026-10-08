@@ -16,6 +16,7 @@ WORKDIR /app
 COPY --from=builder /build/target/*.jar app.jar
 
 ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=render
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
